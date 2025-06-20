@@ -1,0 +1,652 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Managed Image Collage</title>
+    <style>
+        * { box-sizing: border-box; cursor: crosshair; }
+        body { margin: 0; background-color: #ffffff; color: #000000; font-family: 'Courier New', Courier, monospace; overflow: hidden; }
+        #image-container { position: relative; width: 100vw; height: 100vh; }
+        .image-wrapper { position: absolute; }
+        .dynamic-image { display: block; border: 1px solid #000; width: 100%; height: auto; object-fit: cover; }
+        .info-box {
+            display: none; background-color: #fff; border: 1px solid #000;
+            border-top: none; padding: 8px; font-size: 10px;
+            line-height: 1.5; white-space: pre; width: 100%;
+        }
+        .info-box.latest-info { display: block; }
+        #settings-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(255, 255, 255, 0.9);
+            display: flex; justify-content: center; align-items: center; z-index: 1000;
+        }
+        #settings-form { background-color: #fff; padding: 2rem 3rem; border: 1px solid #000; }
+        .form-group { margin-bottom: 1.5rem; text-align: left; }
+        .form-group label { display: block; margin-bottom: 0.5rem; font-size: 0.9rem; text-transform: uppercase; }
+        .form-group input { width: 100%; padding: 0.5rem; background: none; border: 1px solid #000; font-family: inherit; font-size: 1rem; }
+        #start-button {
+            background-color: #000; color: #fff; border: 1px solid #000;
+            padding: 0.75rem 2rem; font-family: inherit; font-size: 1rem;
+            text-transform: uppercase; transition: background-color 0.2s, color 0.2s;
+        }
+        #start-button:hover { background-color: #fff; color: #000; }
+    </style>
+</head>
+<body>
+    <div id="image-container"></div>
+    <div id="settings-overlay">
+        <form id="settings-form">
+            <h2>// CONFIGURE</h2>
+            <div class="form-group">
+                <label for="bpm">SPEED (BPM)</label>
+                <input type="number" id="bpm" value="100" min="1" required>
+            </div>
+            <div class="form-group">
+                <label for="min-size">MIN SIZE (PX)</label>
+                <input type="number" id="min-size" value="200" min="10" required>
+            </div>
+            <div class="form-group">
+                <label for="max-size">MAX SIZE (PX)</label>
+                <input type="number" id="max-size" value="400" min="10" required>
+            </div>
+            <div class="form-group">
+                <label for="max-images">MAX IMAGES ON SCREEN</label>
+                <input type="number" id="max-images" value="16" min="1" required>
+            </div>
+            <button type="submit" id="start-button">INITIATE_</button>
+        </form>
+    </div>
+
+    <script>
+        const imageDataArray = [
+    {
+        "url": "https://d2w9rnfcy7mm78.cloudfront.net/4256808/original_13e7aed00af821f62535b31575ceeead.jpg?1557636002?bc=1",
+        "id": 4256808,
+        "contentType": "image/jpeg",
+        "fileSize": "311 KB",
+        "user": "mmerle \\",
+        "createdAt": "2019-05-12T04:40:02.097Z"
+    },
+    {
+        "url": "https://d2w9rnfcy7mm78.cloudfront.net/18626850/original_784cc551c8ec8208efb11275a26c5202.jpg?1666404319?bc=0",
+        "id": 18626850,
+        "contentType": "image/jpeg",
+        "fileSize": "235 KB",
+        "user": "Matija Gabrilo",
+        "createdAt": "2022-10-22T02:04:30.649Z"
+    },
+    {
+        "url": "https://d2w9rnfcy7mm78.cloudfront.net/14055835/original_255ca7a3a275ac33f65a806b89e16bbc.jpg?1637378074?bc=0",
+        "id": 14055835,
+        "contentType": "image/jpeg",
+        "fileSize": "436 KB",
+        "user": "Stephen Hero",
+        "createdAt": "2021-11-20T03:14:26.701Z"
+    },
+    {
+        "url": "https://d2w9rnfcy7mm78.cloudfront.net/32526470/original_28ee398f8878e081ddd152ecc461f271.png?1732621521?bc=0",
+        "id": 32526470,
+        "contentType": "image/png",
+        "fileSize": "24.2 KB",
+        "user": "Unlearn Studio",
+        "createdAt": "2024-11-26T11:45:19.967Z"
+    },
+    {
+        "url": "https://d2w9rnfcy7mm78.cloudfront.net/11280513/original_3a0d8d1447b3a6c5184f4937f5604904.png?1616445807?bc=0",
+        "id": 11280513,
+        "contentType": "image/png",
+        "fileSize": "67.2 KB",
+        "user": "Erwin Sanvictores",
+        "createdAt": "2021-03-22T20:43:26.496Z"
+    },
+    {
+        "url": "https://d2w9rnfcy7mm78.cloudfront.net/22243406/original_e780a37d515908fc87d95d8769341062.gif?1686683213?bc=0",
+        "id": 22243406,
+        "contentType": "image/gif",
+        "fileSize": "12.2 MB",
+        "user": "jayislate _____",
+        "createdAt": "2023-06-13T19:06:52.275Z"
+    },
+    {
+        "url": "https://d2w9rnfcy7mm78.cloudfront.net/7715593/original_035f81a55c48036700631f75b8cb03a2.png?1592519578?bc=0",
+        "id": 7715593,
+        "contentType": "image/png",
+        "fileSize": "1.3 MB",
+        "user": "yosan alemu",
+        "createdAt": "2020-06-18T22:32:54.780Z"
+    },
+    {
+        "url": "https://d2w9rnfcy7mm78.cloudfront.net/35932971/original_569617d42c93017324e32d64552cfd2c.jpg?1744433157?bc=0",
+        "id": 35932971,
+        "contentType": "image/jpeg",
+        "fileSize": "177 KB",
+        "user": "We Are (Not) The Resistance",
+        "createdAt": "2025-04-12T04:45:55.907Z"
+    },
+    {
+        "url": "https://d2w9rnfcy7mm78.cloudfront.net/37044212/original_d1963a6182910bf56fc73ab65fdb0cb0.png?1748507890?bc=0",
+        "id": 37044212,
+        "contentType": "image/png",
+        "fileSize": "2.2 MB",
+        "user": "Jasper van Doorn",
+        "createdAt": "2025-05-29T08:38:08.860Z"
+    },
+    {
+        "url": "https://d2w9rnfcy7mm78.cloudfront.net/36977858/original_07ddee9ff058fe6610421edaf9271eda.png?1748285973?bc=0",
+        "id": 36977858,
+        "contentType": "image/png",
+        "fileSize": "7.02 MB",
+        "user": "Jasper van Doorn",
+        "createdAt": "2025-05-26T18:56:33.694Z"
+    },
+    {
+        "url": "https://d2w9rnfcy7mm78.cloudfront.net/37374961/original_99402f47d1438a5497ae9b277961f374.png?1749666536?bc=0",
+        "id": 37374961,
+        "contentType": "image/png",
+        "fileSize": "472 KB",
+        "user": "Rogue Stoppard",
+        "createdAt": "2025-06-11T18:28:55.276Z"
+    },
+    {
+        "url": "https://d2w9rnfcy7mm78.cloudfront.net/15882294/original_30ecefdfe7f88fea22659c3aafb14d53.png?1648947476?bc=0",
+        "id": 15882294,
+        "contentType": "image/jpeg",
+        "fileSize": "547 KB",
+        "user": "sharl-endre mass",
+        "createdAt": "2022-04-03T00:57:54.545Z"
+    },
+    {
+        "url": "https://d2w9rnfcy7mm78.cloudfront.net/34320744/original_9a17941db1508fdea457d72431df7789.jpg?1738836242?bc=0",
+        "id": 34320744,
+        "contentType": "image/jpeg",
+        "fileSize": "663 KB",
+        "user": "Kevin Moll",
+        "createdAt": "2025-02-06T10:04:01.152Z"
+    },
+    {
+        "url": "https://d2w9rnfcy7mm78.cloudfront.net/18789248/original_5f4cb1f4889b6126ddfec496d696ba91.jpg?1667385936?bc=0",
+        "id": 18789248,
+        "contentType": "image/jpeg",
+        "fileSize": "166 KB",
+        "user": "William Sachdeva",
+        "createdAt": "2022-11-02T10:45:35.627Z"
+    },
+    {
+        "url": "https://d2w9rnfcy7mm78.cloudfront.net/20131351/original_440c66c1ed1b3c471aa0f1a93e997944.webp?1675158130?bc=0",
+        "id": 20131351,
+        "contentType": "image/webp",
+        "fileSize": "41 KB",
+        "user": "Edeline Go",
+        "createdAt": "2023-01-31T09:42:08.620Z"
+    },
+    {
+        "url": "https://d2w9rnfcy7mm78.cloudfront.net/6799311/original_8e7bcfa6b2e860330f0af3414a04de2f.gif?1586507763?bc=0",
+        "id": 6799311,
+        "contentType": "image/gif",
+        "fileSize": "169 KB",
+        "user": "Erwin Sanvictores",
+        "createdAt": "2020-04-10T08:36:02.843Z"
+    },
+    {
+        "url": "https://d2w9rnfcy7mm78.cloudfront.net/36493581/original_7d2c1373f0b05d4bc093bc38e9c6adf9.jpg?1746546746?bc=0",
+        "id": 36493581,
+        "contentType": "image/jpeg",
+        "fileSize": "60.8 KB",
+        "user": "Victor Ghyssens",
+        "createdAt": "2025-05-06T15:52:25.399Z"
+    },
+    {
+        "url": "https://d2w9rnfcy7mm78.cloudfront.net/25968539/original_7f4dfebf20df34a0976e824965f16783.png?1706388889?bc=0",
+        "id": 25968539,
+        "contentType": "image/png",
+        "fileSize": "1.67 MB",
+        "user": "Kanye West",
+        "createdAt": "2024-01-27T20:54:47.897Z"
+    },
+    {
+        "url": "https://d2w9rnfcy7mm78.cloudfront.net/3716993/original_140934328a54bfd6b55502f344f1c41d.jpg?1550962145?bc=1",
+        "id": 3716993,
+        "contentType": "image/jpeg",
+        "fileSize": "119 KB",
+        "user": "Kanye West",
+        "createdAt": "2019-02-23T22:49:04.235Z"
+    },
+    {
+        "url": "https://d2w9rnfcy7mm78.cloudfront.net/25970003/original_d962c9d522ad558db78b5aac32a67038.png?1706396397?bc=0",
+        "id": 25970003,
+        "contentType": "image/png",
+        "fileSize": "203 KB",
+        "user": "Kanye West",
+        "createdAt": "2024-01-27T22:59:56.045Z"
+    },
+    {
+        "url": "https://d2w9rnfcy7mm78.cloudfront.net/19438494/original_c5df5d6cb2a49703984a0e3f79591ccf.jpg?1671145322?bc=0",
+        "id": 19438494,
+        "contentType": "image/jpeg",
+        "fileSize": "626 KB",
+        "user": "Andrew Nowacki",
+        "createdAt": "2022-12-15T23:02:01.693Z"
+    },
+    {
+        "url": "https://d2w9rnfcy7mm78.cloudfront.net/37550408/original_4df4f75624d061743ddf8072f5d9e082.jpg?1750362445?bc=0",
+        "id": 37550408,
+        "contentType": "image/jpeg",
+        "fileSize": "102 KB",
+        "user": "Bicrome Beats",
+        "createdAt": "2025-06-19T19:47:23.794Z"
+    },
+    {
+        "url": "https://d2w9rnfcy7mm78.cloudfront.net/37550435/original_ea015f97f100a2dcfccf1c7dab69e782.jpg?1750362491?bc=0",
+        "id": 37550435,
+        "contentType": "image/jpeg",
+        "fileSize": "247 KB",
+        "user": "Bicrome Beats",
+        "createdAt": "2025-06-19T19:48:10.017Z"
+    },
+    {
+        "url": "https://d2w9rnfcy7mm78.cloudfront.net/37550449/original_759d7313bed6c15e8ae84b5f0ab23f05.jpg?1750362541?bc=0",
+        "id": 37550449,
+        "contentType": "image/jpeg",
+        "fileSize": "202 KB",
+        "user": "Bicrome Beats",
+        "createdAt": "2025-06-19T19:48:59.833Z"
+    },
+    {
+        "url": "https://d2w9rnfcy7mm78.cloudfront.net/37550457/original_8364d7f0b3eafad1f2f0072de328d70e.jpg?1750362581?bc=0",
+        "id": 37550457,
+        "contentType": "image/jpeg",
+        "fileSize": "269 KB",
+        "user": "Bicrome Beats",
+        "createdAt": "2025-06-19T19:49:39.749Z"
+    },
+    {
+        "url": "https://d2w9rnfcy7mm78.cloudfront.net/37550465/original_e76a822ed7fca9f95f2a20b720ffc083.jpg?1750362628?bc=0",
+        "id": 37550465,
+        "contentType": "image/jpeg",
+        "fileSize": "290 KB",
+        "user": "Bicrome Beats",
+        "createdAt": "2025-06-19T19:50:27.518Z"
+    },
+    {
+        "url": "https://d2w9rnfcy7mm78.cloudfront.net/37550474/original_e3f4494dbe56a2f8f68ef2fd0d679930.jpg?1750362656?bc=0",
+        "id": 37550474,
+        "contentType": "image/jpeg",
+        "fileSize": "404 KB",
+        "user": "Bicrome Beats",
+        "createdAt": "2025-06-19T19:50:54.777Z"
+    },
+    {
+        "url": "https://d2w9rnfcy7mm78.cloudfront.net/37550475/original_c5a7ca6f6da9b3e1be3e793fea50bc25.jpg?1750362676?bc=0",
+        "id": 37550475,
+        "contentType": "image/jpeg",
+        "fileSize": "179 KB",
+        "user": "Bicrome Beats",
+        "createdAt": "2025-06-19T19:51:15.652Z"
+    },
+    {
+        "url": "https://d2w9rnfcy7mm78.cloudfront.net/37550485/original_c4684895ea76ed4e61a8b0ddba7abda2.jpg?1750362708?bc=0",
+        "id": 37550485,
+        "contentType": "image/jpeg",
+        "fileSize": "504 KB",
+        "user": "Bicrome Beats",
+        "createdAt": "2025-06-19T19:51:46.951Z"
+    },
+    {
+        "url": "https://d2w9rnfcy7mm78.cloudfront.net/37550502/original_ba3d7752b59d9583387666bfa05f616b.jpg?1750362754?bc=0",
+        "id": 37550502,
+        "contentType": "image/jpeg",
+        "fileSize": "80.2 KB",
+        "user": "Bicrome Beats",
+        "createdAt": "2025-06-19T19:52:33.266Z"
+    },
+    {
+        "url": "https://d2w9rnfcy7mm78.cloudfront.net/37550507/original_818eca4310b2f80240f9e43575d59364.jpg?1750362786?bc=0",
+        "id": 37550507,
+        "contentType": "image/jpeg",
+        "fileSize": "103 KB",
+        "user": "Bicrome Beats",
+        "createdAt": "2025-06-19T19:53:05.636Z"
+    },
+    {
+        "url": "https://d2w9rnfcy7mm78.cloudfront.net/37550515/original_5c141c11f39d163810506918812784e8.jpg?1750362813?bc=0",
+        "id": 37550515,
+        "contentType": "image/jpeg",
+        "fileSize": "146 KB",
+        "user": "Bicrome Beats",
+        "createdAt": "2025-06-19T19:53:32.216Z"
+    },
+    {
+        "url": "https://d2w9rnfcy7mm78.cloudfront.net/37550525/original_cf2d242f57d5370d141ebba6e1ff7f4e.jpg?1750362842?bc=0",
+        "id": 37550525,
+        "contentType": "image/jpeg",
+        "fileSize": "942 KB",
+        "user": "Bicrome Beats",
+        "createdAt": "2025-06-19T19:54:01.478Z"
+    },
+    {
+        "url": "https://d2w9rnfcy7mm78.cloudfront.net/37550535/original_95646e3bfbde326eba47fc708bd96c8e.jpg?1750362895?bc=0",
+        "id": 37550535,
+        "contentType": "image/jpeg",
+        "fileSize": "59.3 KB",
+        "user": "Bicrome Beats",
+        "createdAt": "2025-06-19T19:54:54.610Z"
+    },
+    {
+        "url": "https://d2w9rnfcy7mm78.cloudfront.net/37550544/original_77ac27aa169af37e39599a719dfdefda.jpg?1750362928?bc=0",
+        "id": 37550544,
+        "contentType": "image/jpeg",
+        "fileSize": "715 KB",
+        "user": "Bicrome Beats",
+        "createdAt": "2025-06-19T19:55:27.536Z"
+    },
+    {
+        "url": "https://d2w9rnfcy7mm78.cloudfront.net/37550558/original_a108353ceca5a3adda873b6f7181692f.png?1750362950?bc=0",
+        "id": 37550558,
+        "contentType": "image/png",
+        "fileSize": "1.75 MB",
+        "user": "Bicrome Beats",
+        "createdAt": "2025-06-19T19:55:48.668Z"
+    },
+    {
+        "url": "https://d2w9rnfcy7mm78.cloudfront.net/37550566/original_ea83f20a626ea97df86697e44413e8ff.jpg?1750362964?bc=0",
+        "id": 37550566,
+        "contentType": "image/jpeg",
+        "fileSize": "338 KB",
+        "user": "Bicrome Beats",
+        "createdAt": "2025-06-19T19:56:03.455Z"
+    },
+    {
+        "url": "https://d2w9rnfcy7mm78.cloudfront.net/37550578/original_8ed42445ee24565d6e1c45a990a94c1c.jpg?1750363002?bc=0",
+        "id": 37550578,
+        "contentType": "image/jpeg",
+        "fileSize": "113 KB",
+        "user": "Bicrome Beats",
+        "createdAt": "2025-06-19T19:56:41.274Z"
+    },
+    {
+        "url": "https://d2w9rnfcy7mm78.cloudfront.net/37550595/original_c998b6ba5e97c24e72222abdb30cba5d.jpg?1750363041?bc=0",
+        "id": 37550595,
+        "contentType": "image/jpeg",
+        "fileSize": "78.8 KB",
+        "user": "Bicrome Beats",
+        "createdAt": "2025-06-19T19:57:19.735Z"
+    },
+    {
+        "url": "https://d2w9rnfcy7mm78.cloudfront.net/37550603/original_aea3dd580e9554be7cf59c8b4d9e1319.jpg?1750363067?bc=0",
+        "id": 37550603,
+        "contentType": "image/jpeg",
+        "fileSize": "53.8 KB",
+        "user": "Bicrome Beats",
+        "createdAt": "2025-06-19T19:57:46.152Z"
+    },
+    {
+        "url": "https://d2w9rnfcy7mm78.cloudfront.net/37550612/original_0affaaccf97083a6bee73832b193c1b0.jpg?1750363099?bc=0",
+        "id": 37550612,
+        "contentType": "image/jpeg",
+        "fileSize": "70 KB",
+        "user": "Bicrome Beats",
+        "createdAt": "2025-06-19T19:58:18.560Z"
+    },
+    {
+        "url": "https://d2w9rnfcy7mm78.cloudfront.net/37550624/original_4863efd40a2150458f62bff13be5c8df.jpg?1750363124?bc=0",
+        "id": 37550624,
+        "contentType": "image/jpeg",
+        "fileSize": "40.3 KB",
+        "user": "Bicrome Beats",
+        "createdAt": "2025-06-19T19:58:42.986Z"
+    },
+    {
+        "url": "https://d2w9rnfcy7mm78.cloudfront.net/37550650/original_81ae4a8bfda9dfa98c40ea054d14d726.jpg?1750363178?bc=0",
+        "id": 37550650,
+        "contentType": "image/jpeg",
+        "fileSize": "114 KB",
+        "user": "Bicrome Beats",
+        "createdAt": "2025-06-19T19:59:36.822Z"
+    },
+    {
+        "url": "https://d2w9rnfcy7mm78.cloudfront.net/37550692/original_147784cc2e60af20c0a5e870c5901280.jpg?1750363241?bc=0",
+        "id": 37550692,
+        "contentType": "image/jpeg",
+        "fileSize": "302 KB",
+        "user": "Bicrome Beats",
+        "createdAt": "2025-06-19T20:00:40.216Z"
+    },
+    {
+        "url": "https://d2w9rnfcy7mm78.cloudfront.net/37550702/original_7f6d4366471cbca37491899416903cb2.jpg?1750363263?bc=0",
+        "id": 37550702,
+        "contentType": "image/jpeg",
+        "fileSize": "315 KB",
+        "user": "Bicrome Beats",
+        "createdAt": "2025-06-19T20:01:02.382Z"
+    },
+    {
+        "url": "https://d2w9rnfcy7mm78.cloudfront.net/37550715/original_5155986458fa9a26e7ad187fe0bd56ba.jpg?1750363301?bc=0",
+        "id": 37550715,
+        "contentType": "image/jpeg",
+        "fileSize": "397 KB",
+        "user": "Bicrome Beats",
+        "createdAt": "2025-06-19T20:01:40.215Z"
+    },
+    {
+        "url": "https://d2w9rnfcy7mm78.cloudfront.net/37550723/original_22871ab39dbfa3ee55f2fe529b75ac96.jpg?1750363323?bc=0",
+        "id": 37550723,
+        "contentType": "image/jpeg",
+        "fileSize": "54 KB",
+        "user": "Bicrome Beats",
+        "createdAt": "2025-06-19T20:02:01.926Z"
+    },
+    {
+        "url": "https://d2w9rnfcy7mm78.cloudfront.net/37550728/original_c1ad3c614814dd102051a81bfb088778.jpg?1750363341?bc=0",
+        "id": 37550728,
+        "contentType": "image/jpeg",
+        "fileSize": "142 KB",
+        "user": "Bicrome Beats",
+        "createdAt": "2025-06-19T20:02:20.103Z"
+    },
+    {
+        "url": "https://d2w9rnfcy7mm78.cloudfront.net/37550791/original_3e0c93a69362147916d268e79ee5947c.jpg?1750363516?bc=0",
+        "id": 37550791,
+        "contentType": "image/jpeg",
+        "fileSize": "130 KB",
+        "user": "Bicrome Beats",
+        "createdAt": "2025-06-19T20:05:14.953Z"
+    },
+    {
+        "url": "https://d2w9rnfcy7mm78.cloudfront.net/37550813/original_b16579b33bcd8876ac056ef45a46f32c.jpg?1750363581?bc=0",
+        "id": 37550813,
+        "contentType": "image/jpeg",
+        "fileSize": "39.9 KB",
+        "user": "Bicrome Beats",
+        "createdAt": "2025-06-19T20:06:20.071Z"
+    },
+    {
+        "url": "https://d2w9rnfcy7mm78.cloudfront.net/37550827/original_166594e2e1e137c41dfef30cd453f701.jpg?1750363616?bc=0",
+        "id": 37550827,
+        "contentType": "image/jpeg",
+        "fileSize": "181 KB",
+        "user": "Bicrome Beats",
+        "createdAt": "2025-06-19T20:06:55.280Z"
+    },
+    {
+        "url": "https://d2w9rnfcy7mm78.cloudfront.net/37550848/original_0342bba7bc9d460f418227156227c0e6.jpg?1750363672?bc=0",
+        "id": 37550848,
+        "contentType": "image/jpeg",
+        "fileSize": "23.3 KB",
+        "user": "Bicrome Beats",
+        "createdAt": "2025-06-19T20:07:51.583Z"
+    },
+    {
+        "url": "https://d2w9rnfcy7mm78.cloudfront.net/37550861/original_f4a5fbda81a676473652c2c7e5b0cd35.jpg?1750363729?bc=0",
+        "id": 37550861,
+        "contentType": "image/jpeg",
+        "fileSize": "155 KB",
+        "user": "Bicrome Beats",
+        "createdAt": "2025-06-19T20:08:48.028Z"
+    },
+    {
+        "url": "https://d2w9rnfcy7mm78.cloudfront.net/37550869/original_ec5a1f11c252af4b2a11b9af5975514b.jpg?1750363763?bc=0",
+        "id": 37550869,
+        "contentType": "image/jpeg",
+        "fileSize": "106 KB",
+        "user": "Bicrome Beats",
+        "createdAt": "2025-06-19T20:09:21.833Z"
+    },
+    {
+        "url": "https://d2w9rnfcy7mm78.cloudfront.net/18552834/original_2fda5b0749b56c985180a789774ae17c.jpg?1666045583?bc=0",
+        "id": 18552834,
+        "contentType": "image/jpeg",
+        "fileSize": "671 KB",
+        "user": "Matija Gabrilo",
+        "createdAt": "2022-10-17T22:26:15.582Z"
+    },
+    {
+        "url": "https://d2w9rnfcy7mm78.cloudfront.net/34052684/original_f72212b000f40e6da916ee553a07bbf8.jpg?1738046856?bc=0",
+        "id": 34052684,
+        "contentType": "image/jpeg",
+        "fileSize": "99.2 KB",
+        "user": "Pier Gagn\u00e9",
+        "createdAt": "2025-01-28T06:47:35.776Z"
+    },
+    {
+        "url": "https://d2w9rnfcy7mm78.cloudfront.net/37375688/original_89ab2751fc3c4087d0623293ef0d04ac.jpg?1749668928?bc=0",
+        "id": 37375688,
+        "contentType": "image/jpeg",
+        "fileSize": "64.1 KB",
+        "user": "Roberto Bernasconi",
+        "createdAt": "2025-06-11T19:08:47.408Z"
+    },
+    {
+        "url": "https://d2w9rnfcy7mm78.cloudfront.net/1502210/original_29b0cdddac64876024d7ad7679fcc9cd.jpg?1513091723?bc=1",
+        "id": 1502210,
+        "contentType": "image/jpeg",
+        "fileSize": "195 KB",
+        "user": "Ross Gendels",
+        "createdAt": "2017-12-12T15:15:20.354Z"
+    },
+    {
+        "url": "https://d2w9rnfcy7mm78.cloudfront.net/19750166/original_e26ad070dffe1afc31c5bac94800bbda.jpg?1673264739?bc=0",
+        "id": 19750166,
+        "contentType": "image/jpeg",
+        "fileSize": "187 KB",
+        "user": "Mari Nus",
+        "createdAt": "2023-01-09T11:45:36.186Z"
+    },
+    {
+        "url": "https://d2w9rnfcy7mm78.cloudfront.net/9122586/original_1bd17a57567cfec4d78939f1a9004be2.jpg?1602773674?bc=0",
+        "id": 9122586,
+        "contentType": "image/jpeg",
+        "fileSize": "8.08 KB",
+        "user": "Carlo Canun",
+        "createdAt": "2020-10-15T14:54:33.334Z"
+    }
+];
+        const settingsOverlay = document.getElementById('settings-overlay');
+        const settingsForm = document.getElementById('settings-form');
+        const imageContainer = document.getElementById('image-container');
+
+        let currentIndex = 0;
+        let lastInfoBox = null;
+        let lastImageRect = null; // Store the bounding box of the last image
+        const activeWrappers = [];
+
+        settingsForm.addEventListener('submit', function(event) {
+            event.preventDefault();
+            const bpm = parseInt(document.getElementById('bpm').value, 10);
+            const minSize = parseInt(document.getElementById('min-size').value, 10);
+            const maxSize = parseInt(document.getElementById('max-size').value, 10);
+            const maxImages = parseInt(document.getElementById('max-images').value, 10);
+            if (isNaN(bpm) || isNaN(minSize) || isNaN(maxSize) || isNaN(maxImages)) {
+                alert('Invalid settings. Please check your values.'); return;
+            }
+            settingsOverlay.style.display = 'none';
+            const intervalMilliseconds = (60 / bpm) * 1000;
+            startCollage(intervalMilliseconds, minSize, maxSize, maxImages);
+        });
+
+        function checkOverlap(rect1, rect2) {
+            const margin = 10; // A small buffer so they don't touch
+            return (
+                rect1.x < rect2.x + rect2.width + margin &&
+                rect1.x + rect1.width + margin > rect2.x &&
+                rect1.y < rect2.y + rect2.height + margin &&
+                rect1.y + rect1.height + margin > rect2.y
+            );
+        }
+
+        function createAndPlaceImage(minSize, maxSize, maxImages) {
+            if (imageDataArray.length === 0) return;
+
+            if (activeWrappers.length >= maxImages) {
+                const wrapperToRemove = activeWrappers.shift();
+                // If the oldest wrapper was the one we were tracking, nullify the tracker
+                if (wrapperToRemove.rectData === lastImageRect) {
+                    lastImageRect = null;
+                }
+                wrapperToRemove.remove(); // Remove instantly
+            }
+
+            const imageData = imageDataArray[currentIndex];
+            currentIndex = (currentIndex + 1) % imageDataArray.length;
+
+            const wrapper = document.createElement('div');
+            wrapper.className = 'image-wrapper';
+            const img = document.createElement('img');
+            img.className = 'dynamic-image';
+            img.src = imageData.url;
+            const infoBox = document.createElement('div');
+            infoBox.className = 'info-box';
+            infoBox.innerHTML = `ID:         ${imageData.id}\nSOURCE:     ${imageData.user}\nTYPE:       ${imageData.contentType}\nSIZE:       ${imageData.fileSize}\nCREATED_AT: ${imageData.createdAt}`;
+            
+            if (lastInfoBox) { lastInfoBox.classList.remove('latest-info'); }
+            infoBox.classList.add('latest-info');
+            lastInfoBox = infoBox;
+
+            // --- New Placement Logic ---
+            let newRect;
+            let size;
+            const maxRetries = 50; // Safety to prevent infinite loops
+            let retries = 0;
+            const viewportWidth = window.innerWidth;
+            const viewportHeight = window.innerHeight;
+
+            // Keep trying to find a non-overlapping position
+            do {
+                size = Math.random() * (maxSize - minSize) + minSize;
+                // Since we don't know the exact image height before it loads,
+                // we'll use a common aspect ratio (e.g., 4:3) for an estimated height
+                // for the overlap check. This is more robust than assuming a square.
+                const estimatedHeight = size * (3 / 4) + 100; // image height + info box height
+
+                newRect = {
+                    x: Math.random() * (viewportWidth - size),
+                    y: Math.random() * (viewportHeight - estimatedHeight),
+                    width: size,
+                    height: estimatedHeight
+                };
+                retries++;
+            } while (lastImageRect && checkOverlap(newRect, lastImageRect) && retries < maxRetries);
+            
+            // Apply the final calculated position
+            wrapper.style.width = size + 'px';
+            wrapper.style.left = newRect.x + 'px';
+            wrapper.style.top = newRect.y + 'px';
+            
+            // Store the rectangle data on the element and update the global tracker
+            wrapper.rectData = newRect;
+            lastImageRect = newRect;
+
+            wrapper.appendChild(img);
+            wrapper.appendChild(infoBox);
+            imageContainer.appendChild(wrapper);
+            activeWrappers.push(wrapper);
+        }
+
+        function startCollage(interval, minSize, maxSize, maxImages) {
+            createAndPlaceImage(minSize, maxSize, maxImages);
+            setInterval(() => createAndPlaceImage(minSize, maxSize, maxImages), interval);
+        }
+    </script>
+</body>
+</html>
