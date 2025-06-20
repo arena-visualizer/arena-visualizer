@@ -5,56 +5,95 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Are.na Dynamic Collage Generator</title>
     <style>
+        :root {
+            --bg-color: #ffffff;
+            --text-color: #000000;
+            --border-color: #000000;
+            --focus-color: #888888;
+            --overlay-bg: rgba(255, 255, 255, 0.95);
+        }
+        body.cream-mode {
+            --bg-color: #fdfaf3;
+            --text-color: #4a4137;
+            --border-color: #4a4137;
+            --focus-color: #7d7061;
+            --overlay-bg: rgba(253, 250, 243, 0.95);
+        }
+        body.dark-mode {
+            --bg-color: #1a1a1a;
+            --text-color: #e0e0e0;
+            --border-color: #e0e0e0;
+            --focus-color: #555555;
+            --overlay-bg: rgba(26, 26, 26, 0.95);
+        }
         * { box-sizing: border-box; cursor: crosshair; }
-        body { margin: 0; background-color: #ffffff; color: #000000; font-family: 'Courier New', Courier, monospace; overflow: hidden; }
+        body { 
+            margin: 0; 
+            background-color: var(--bg-color); 
+            color: var(--text-color); 
+            font-family: 'Courier New', Courier, monospace; 
+            overflow: hidden; 
+            transition: background-color 0.3s, color 0.3s;
+        }
         
         /* --- UI Screens --- */
         .ui-screen {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background-color: rgba(255, 255, 255, 0.95);
+            background-color: var(--overlay-bg);
             display: flex; flex-direction: column; justify-content: center; align-items: center;
             z-index: 1000;
+            transition: background-color 0.3s;
         }
-        #settings-overlay {
-            display: none; /* Hidden initially */
-        }
+        #settings-overlay { display: none; }
         .ui-box {
-            background-color: #fff;
+            background-color: var(--bg-color);
             padding: 2rem 3rem;
-            border: 1px solid #000;
-            width: 500px; /* Wider box for the URL input */
-            max-width: 90vw; /* Responsive for smaller screens */
+            border: 1px solid var(--border-color);
+            width: 500px; max-width: 90vw;
+            transition: background-color 0.3s, border-color 0.3s;
         }
-        .ui-box h2 {
-            text-align: left; /* Align headers to the left */
-        }
-        .form-group { margin-bottom: 1.5rem; text-align: left; }
+        .ui-box h2 { text-align: left; }
+        .form-group { margin-bottom: 1rem; text-align: left; }
         .form-group label { display: block; margin-bottom: 0.5rem; font-size: 0.9rem; text-transform: uppercase; }
-        .form-group input { width: 100%; padding: 0.5rem; background: none; border: 1px solid #000; font-family: inherit; font-size: 1rem; }
-        
-        /* Replace default blue focus outline with gray */
-        .form-group input:focus, .action-button:focus {
-            outline: 1px solid #888;
+        .form-group input, .form-group select { 
+            width: 100%; padding: 0.5rem; 
+            background: none; 
+            border: 1px solid var(--border-color); 
+            color: var(--text-color);
+            font-family: inherit; font-size: 1rem; 
         }
-
+        .form-group input:focus, .form-group select:focus, .action-button:focus {
+            outline: 1px solid var(--focus-color);
+        }
         .action-button {
-            background-color: #000; color: #fff; border: 1px solid #000;
+            background-color: var(--text-color); color: var(--bg-color); border: 1px solid var(--border-color);
             padding: 0.75rem 2rem; font-family: inherit; font-size: 1rem;
             text-transform: uppercase; transition: background-color 0.2s, color 0.2s;
         }
-        .action-button:hover { background-color: #fff; color: #000; }
+        .action-button:hover { background-color: var(--bg-color); color: var(--text-color); }
         #status-message { margin-top: 1rem; font-size: 0.9rem; min-height: 1.2em; text-align: center; }
 
-        /* --- Collage Styles --- */
+        /* --- Collage Styles & Animations --- */
         #image-container { position: relative; width: 100vw; height: 100vh; }
         .image-wrapper { position: absolute; }
-        .dynamic-image { display: block; border: 1px solid #000; width: 100%; height: auto; object-fit: cover; }
+        .dynamic-image { display: block; width: 100%; height: auto; object-fit: cover; border: 1px solid var(--border-color); }
+        .dynamic-image.no-border { border: none; }
         .info-box {
-            display: none; background-color: #fff; border: 1px solid #000;
+            display: none; background-color: var(--bg-color); border: 1px solid var(--border-color);
             border-top: none; padding: 8px; font-size: 10px;
             line-height: 1.5; white-space: pre; width: 100%;
         }
-        .info-box.latest-info { display: block; }
+        .info-box.latest-info, .info-box.show-all { display: block; }
+        
+        .anim-fade { animation: fadeIn 0.5s ease-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        /* New, chunkier pixel animation */
+        .anim-pixelate { animation: pixelateIn 0.3s steps(4) forwards; }
+        @keyframes pixelateIn {
+            from { clip-path: inset(50%); } /* Start completely collapsed */
+            to { clip-path: inset(0); }   /* End fully visible */
+        }
     </style>
 </head>
 <body>
@@ -79,21 +118,56 @@
         <div class="ui-box">
             <h2>// CONFIGURE</h2>
             <form id="settings-form">
-                <div class="form-group">
-                    <label for="bpm">SPEED (BPM)</label>
-                    <input type="number" id="bpm" value="100" min="1" required>
+                <div style="display: flex; gap: 1rem;">
+                    <div class="form-group" style="flex: 1;">
+                        <label for="bpm">SPEED (BPM)</label>
+                        <input type="number" id="bpm" value="100" min="1" required>
+                    </div>
+                     <div class="form-group" style="flex: 1;">
+                        <label for="max-images">MAX IMAGES</label>
+                        <input type="number" id="max-images" value="16" min="1" required>
+                    </div>
+                </div>
+                <div style="display: flex; gap: 1rem;">
+                    <div class="form-group" style="flex: 1;">
+                        <label for="min-size">MIN SIZE (PX)</label>
+                        <input type="number" id="min-size" value="200" min="10" required>
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label for="max-size">MAX SIZE (PX)</label>
+                        <input type="number" id="max-size" value="400" min="10" required>
+                    </div>
+                </div>
+                 <div class="form-group">
+                    <label for="animation-mode">ANIMATION</label>
+                    <select id="animation-mode">
+                        <option value="none" selected>None</option>
+                        <option value="fade">Fade</option>
+                        <option value="pixelate">Pixelate</option>
+                    </select>
                 </div>
                 <div class="form-group">
-                    <label for="min-size">MIN SIZE (PX)</label>
-                    <input type="number" id="min-size" value="200" min="10" required>
+                    <label for="info-box-mode">INFO BOX</label>
+                    <select id="info-box-mode">
+                        <option value="latest" selected>Latest Only</option>
+                        <option value="all">Show All</option>
+                        <option value="none">Disabled</option>
+                    </select>
+                </div>
+                 <div class="form-group">
+                    <label for="border-mode">BORDERS</label>
+                    <select id="border-mode">
+                        <option value="enabled" selected>Enabled</option>
+                        <option value="disabled">Disabled</option>
+                    </select>
                 </div>
                 <div class="form-group">
-                    <label for="max-size">MAX SIZE (PX)</label>
-                    <input type="number" id="max-size" value="400" min="10" required>
-                </div>
-                <div class="form-group">
-                    <label for="max-images">MAX IMAGES ON SCREEN</label>
-                    <input type="number" id="max-images" value="16" min="1" required>
+                    <label for="theme-selector">THEME</label>
+                    <select id="theme-selector">
+                        <option value="light" selected>Light</option>
+                        <option value="cream">Cream</option>
+                        <option value="dark">Dark</option>
+                    </select>
                 </div>
                 <button type="submit" class="action-button">INITIATE_</button>
             </form>
@@ -107,49 +181,51 @@
         const initialScreen = document.getElementById('initial-screen');
         const statusMessage = document.getElementById('status-message');
         const imageContainer = document.getElementById('image-container');
+        const themeSelector = document.getElementById('theme-selector');
 
-        let imageDataArray = [];
-        let currentIndex = 0;
-        let lastInfoBox = null;
-        let lastImageRect = null;
+        let imageDataArray = [], currentIndex = 0, lastInfoBox = null, lastImageRect = null;
         const activeWrappers = [];
+
+        function detectMobileAndSetDefaults() {
+            if (/Mobi|Android/i.test(navigator.userAgent)) {
+                document.getElementById('min-size').value = 60;
+                document.getElementById('max-size').value = 200;
+            }
+        }
+        
+        function applyTheme(theme) {
+            document.body.classList.remove('dark-mode', 'cream-mode');
+            if (theme !== 'light') {
+                document.body.classList.add(`${theme}-mode`);
+            }
+        }
+
+        detectMobileAndSetDefaults();
+        applyTheme(themeSelector.value); // Apply default theme on load
+        themeSelector.addEventListener('input', (e) => applyTheme(e.target.value));
 
         loadForm.addEventListener('submit', async (event) => {
             event.preventDefault();
             const urlInput = document.getElementById('channel-url').value.trim();
             statusMessage.textContent = 'Parsing URL...';
-
             const slug = urlInput.split('/').pop();
-            if (!slug) {
-                statusMessage.textContent = 'Error: Invalid URL format.';
-                return;
-            }
-
+            if (!slug) { statusMessage.textContent = 'Error: Invalid URL format.'; return; }
             const apiUrl = `https://api.are.na/v2/channels/${slug}/contents?page=1&per=1000`;
             statusMessage.textContent = `Fetching data from ${slug}...`;
-
             try {
                 const response = await fetch(apiUrl);
-                if (!response.ok) {
-                    throw new Error(`API Error: ${response.status} ${response.statusText}. Channel might be private or invalid.`);
-                }
+                if (!response.ok) throw new Error(`API Error: ${response.status}. Channel might be private or invalid.`);
                 const data = await response.json();
                 processApiData(data);
-
-                if (imageDataArray.length === 0) {
-                     statusMessage.textContent = 'Error: No images found in this channel.';
-                     return;
-                }
+                if (imageDataArray.length === 0) { statusMessage.textContent = 'Error: No images found in this channel.'; return; }
                 initialScreen.style.display = 'none';
                 settingsOverlay.style.display = 'flex';
-            } catch (error) {
-                statusMessage.textContent = `Error: ${error.message}`;
-            }
+            } catch (error) { statusMessage.textContent = `Error: ${error.message}`; }
         });
 
         function processApiData(data) {
             imageDataArray = [];
-            if (data && data.contents) {
+            if (data?.contents) {
                 for (const item of data.contents) {
                     if (item.class === 'Image' && item.image?.original?.url) {
                         imageDataArray.push({
@@ -167,88 +243,84 @@
 
         settingsForm.addEventListener('submit', (event) => {
             event.preventDefault();
-            const bpm = parseInt(document.getElementById('bpm').value, 10);
-            const minSize = parseInt(document.getElementById('min-size').value, 10);
-            const maxSize = parseInt(document.getElementById('max-size').value, 10);
-            const maxImages = parseInt(document.getElementById('max-images').value, 10);
-            if ([bpm, minSize, maxSize, maxImages].some(isNaN)) {
-                alert('Invalid settings. Please check your values.'); return;
-            }
+            const settings = {
+                bpm: parseInt(document.getElementById('bpm').value, 10), minSize: parseInt(document.getElementById('min-size').value, 10),
+                maxSize: parseInt(document.getElementById('max-size').value, 10), maxImages: parseInt(document.getElementById('max-images').value, 10),
+                animationMode: document.getElementById('animation-mode').value, infoBoxMode: document.getElementById('info-box-mode').value,
+                borderMode: document.getElementById('border-mode').value
+            };
+            if (Object.values(settings).slice(0, 4).some(isNaN)) { alert('Invalid number in settings.'); return; }
             settingsOverlay.style.display = 'none';
-            const intervalMilliseconds = (60 / bpm) * 1000;
-            startCollage(intervalMilliseconds, minSize, maxSize, maxImages);
+            const intervalMilliseconds = (60 / settings.bpm) * 1000;
+            startCollage(intervalMilliseconds, settings);
         });
 
         function checkOverlap(rect1, rect2) {
             const margin = 10;
-            return (
-                rect1.x < rect2.x + rect2.width + margin &&
-                rect1.x + rect1.width + margin > rect2.x &&
-                rect1.y < rect2.y + rect2.height + margin &&
-                rect1.y + rect1.height + margin > rect2.y
-            );
+            return (rect1.x < rect2.x + rect2.width + margin && rect1.x + rect1.width + margin > rect2.x &&
+                    rect1.y < rect2.y + rect2.height + margin && rect1.y + rect1.height + margin > rect2.y);
         }
 
-        function createAndPlaceImage(minSize, maxSize, maxImages) {
+        function createAndPlaceImage(settings) {
             if (imageDataArray.length === 0) return;
-
-            if (activeWrappers.length >= maxImages) {
+            if (activeWrappers.length >= settings.maxImages) {
                 const wrapperToRemove = activeWrappers.shift();
-                if (wrapperToRemove.rectData === lastImageRect) {
-                    lastImageRect = null;
+                if (wrapperToRemove.rectData === lastImageRect) { lastImageRect = null; }
+                if (settings.animationMode === 'fade') {
+                    wrapperToRemove.style.animation = 'fadeOut 0.5s forwards';
+                    wrapperToRemove.addEventListener('animationend', () => wrapperToRemove.remove(), { once: true });
+                } else {
+                    wrapperToRemove.remove();
                 }
-                wrapperToRemove.remove();
             }
-
             const imageData = imageDataArray[currentIndex];
             currentIndex = (currentIndex + 1) % imageDataArray.length;
-
             const wrapper = document.createElement('div');
             wrapper.className = 'image-wrapper';
             const img = document.createElement('img');
             img.className = 'dynamic-image';
             img.src = imageData.url;
-            const infoBox = document.createElement('div');
-            infoBox.className = 'info-box';
-            infoBox.innerHTML = `ID:         ${imageData.id}\nSOURCE:     ${imageData.user}\nTYPE:       ${imageData.contentType}\nSIZE:       ${imageData.fileSize}\nCREATED_AT: ${imageData.createdAt}`;
-            
-            if (lastInfoBox) { lastInfoBox.classList.remove('latest-info'); }
-            infoBox.classList.add('latest-info');
-            lastInfoBox = infoBox;
 
-            let newRect, size;
-            let retries = 0;
+            if (settings.animationMode !== 'none') wrapper.classList.add(`anim-${settings.animationMode}`);
+            if (settings.borderMode === 'disabled') img.classList.add('no-border');
+
+            let newRect, size, retries = 0;
             const maxRetries = 50;
             const viewportWidth = window.innerWidth, viewportHeight = window.innerHeight;
-
             do {
-                size = Math.random() * (maxSize - minSize) + minSize;
-                const estimatedHeight = size * (3 / 4) + 100;
-                newRect = {
-                    x: Math.random() * (viewportWidth - size),
-                    y: Math.random() * (viewportHeight - estimatedHeight),
-                    width: size,
-                    height: estimatedHeight
-                };
+                size = Math.random() * (settings.maxSize - settings.minSize) + settings.minSize;
+                const estimatedHeight = size * (3/4) + (settings.infoBoxMode !== 'none' ? 100 : 0);
+                newRect = { x: Math.random()*(viewportWidth-size), y: Math.random()*(viewportHeight-estimatedHeight), width: size, height: estimatedHeight };
                 retries++;
             } while (lastImageRect && checkOverlap(newRect, lastImageRect) && retries < maxRetries);
-            
+
             wrapper.style.width = `${size}px`;
             wrapper.style.left = `${newRect.x}px`;
             wrapper.style.top = `${newRect.y}px`;
-            
             wrapper.rectData = newRect;
             lastImageRect = newRect;
 
-            wrapper.appendChild(img);
-            wrapper.appendChild(infoBox);
+            if (settings.infoBoxMode !== 'none') {
+                const infoBox = document.createElement('div');
+                infoBox.className = 'info-box';
+                infoBox.innerHTML = `ID:         ${imageData.id}\nSOURCE:     ${imageData.user}\nTYPE:       ${imageData.contentType}\nSIZE:       ${imageData.fileSize}\nCREATED_AT: ${imageData.createdAt}`;
+                if (settings.infoBoxMode === 'all') { infoBox.classList.add('show-all'); } 
+                else { // 'latest'
+                    if (lastInfoBox) { lastInfoBox.classList.remove('latest-info'); }
+                    infoBox.classList.add('latest-info');
+                    lastInfoBox = infoBox;
+                }
+                wrapper.appendChild(infoBox);
+            }
+
+            wrapper.insertBefore(img, wrapper.firstChild);
             imageContainer.appendChild(wrapper);
             activeWrappers.push(wrapper);
         }
 
-        function startCollage(interval, minSize, maxSize, maxImages) {
-            createAndPlaceImage(minSize, maxSize, maxImages);
-            setInterval(() => createAndPlaceImage(minSize, maxSize, maxImages), interval);
+        function startCollage(interval, settings) {
+            createAndPlaceImage(settings);
+            setInterval(() => createAndPlaceImage(settings), interval);
         }
     </script>
 </body>
