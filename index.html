@@ -22,18 +22,28 @@
             background-color: #fff;
             padding: 2rem 3rem;
             border: 1px solid #000;
-            text-align: center;
+            width: 500px; /* Wider box for the URL input */
+            max-width: 90vw; /* Responsive for smaller screens */
+        }
+        .ui-box h2 {
+            text-align: left; /* Align headers to the left */
         }
         .form-group { margin-bottom: 1.5rem; text-align: left; }
         .form-group label { display: block; margin-bottom: 0.5rem; font-size: 0.9rem; text-transform: uppercase; }
         .form-group input { width: 100%; padding: 0.5rem; background: none; border: 1px solid #000; font-family: inherit; font-size: 1rem; }
+        
+        /* Replace default blue focus outline with gray */
+        .form-group input:focus, .action-button:focus {
+            outline: 1px solid #888;
+        }
+
         .action-button {
             background-color: #000; color: #fff; border: 1px solid #000;
             padding: 0.75rem 2rem; font-family: inherit; font-size: 1rem;
             text-transform: uppercase; transition: background-color 0.2s, color 0.2s;
         }
         .action-button:hover { background-color: #fff; color: #000; }
-        #status-message { margin-top: 1rem; font-size: 0.9rem; min-height: 1.2em; }
+        #status-message { margin-top: 1rem; font-size: 0.9rem; min-height: 1.2em; text-align: center; }
 
         /* --- Collage Styles --- */
         #image-container { position: relative; width: 100vw; height: 100vh; }
@@ -49,10 +59,8 @@
 </head>
 <body>
 
-    <!-- Main container for the visual collage -->
     <div id="image-container"></div>
 
-    <!-- Screen 1: Initial URL Input -->
     <div id="initial-screen" class="ui-screen">
         <div class="ui-box">
             <h2>// LOAD CHANNEL</h2>
@@ -67,7 +75,6 @@
         </div>
     </div>
 
-    <!-- Screen 2: Settings Configuration -->
     <div id="settings-overlay" class="ui-screen">
         <div class="ui-box">
             <h2>// CONFIGURE</h2>
@@ -86,7 +93,7 @@
                 </div>
                 <div class="form-group">
                     <label for="max-images">MAX IMAGES ON SCREEN</label>
-                    <input type="number" id="max-images" value="20" min="1" required>
+                    <input type="number" id="max-images" value="16" min="1" required>
                 </div>
                 <button type="submit" class="action-button">INITIATE_</button>
             </form>
@@ -94,7 +101,6 @@
     </div>
 
     <script>
-        // --- DOM Elements ---
         const loadForm = document.getElementById('load-form');
         const settingsOverlay = document.getElementById('settings-overlay');
         const settingsForm = document.getElementById('settings-form');
@@ -102,14 +108,12 @@
         const statusMessage = document.getElementById('status-message');
         const imageContainer = document.getElementById('image-container');
 
-        // --- Global State ---
         let imageDataArray = [];
         let currentIndex = 0;
         let lastInfoBox = null;
         let lastImageRect = null;
         const activeWrappers = [];
 
-        // --- Step 1: Handle Channel Loading ---
         loadForm.addEventListener('submit', async (event) => {
             event.preventDefault();
             const urlInput = document.getElementById('channel-url').value.trim();
@@ -136,19 +140,15 @@
                      statusMessage.textContent = 'Error: No images found in this channel.';
                      return;
                 }
-
-                // Transition to the next screen
                 initialScreen.style.display = 'none';
                 settingsOverlay.style.display = 'flex';
-
             } catch (error) {
                 statusMessage.textContent = `Error: ${error.message}`;
-                console.error('Fetch error:', error);
             }
         });
 
         function processApiData(data) {
-            imageDataArray = []; // Clear previous data
+            imageDataArray = [];
             if (data && data.contents) {
                 for (const item of data.contents) {
                     if (item.class === 'Image' && item.image?.original?.url) {
@@ -165,24 +165,20 @@
             }
         }
 
-        // --- Step 2: Handle Settings & Start Collage ---
         settingsForm.addEventListener('submit', (event) => {
             event.preventDefault();
             const bpm = parseInt(document.getElementById('bpm').value, 10);
             const minSize = parseInt(document.getElementById('min-size').value, 10);
             const maxSize = parseInt(document.getElementById('max-size').value, 10);
             const maxImages = parseInt(document.getElementById('max-images').value, 10);
-            
             if ([bpm, minSize, maxSize, maxImages].some(isNaN)) {
                 alert('Invalid settings. Please check your values.'); return;
             }
-
             settingsOverlay.style.display = 'none';
             const intervalMilliseconds = (60 / bpm) * 1000;
             startCollage(intervalMilliseconds, minSize, maxSize, maxImages);
         });
 
-        // --- Step 3: Collage Generation Logic ---
         function checkOverlap(rect1, rect2) {
             const margin = 10;
             return (
@@ -221,7 +217,8 @@
             lastInfoBox = infoBox;
 
             let newRect, size;
-            const maxRetries = 50, retries = 0;
+            let retries = 0;
+            const maxRetries = 50;
             const viewportWidth = window.innerWidth, viewportHeight = window.innerHeight;
 
             do {
@@ -233,6 +230,7 @@
                     width: size,
                     height: estimatedHeight
                 };
+                retries++;
             } while (lastImageRect && checkOverlap(newRect, lastImageRect) && retries < maxRetries);
             
             wrapper.style.width = `${size}px`;
